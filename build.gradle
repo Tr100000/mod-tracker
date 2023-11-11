@@ -38,17 +38,14 @@ dependencies {
 	modImplementation "com.terraformersmc:modmenu:${modmenu_version}"
 }
 
-// A bug in Quilt Loom causes transitive fabric dependencies to not be removed
-// If you have issues with dependencies, try uncommenting the lines below
-// https://github.com/QuiltMC/quilt-loom/issues/40
-// project.configurations.all {
-// 	exclude(group: "net.fabricmc", module: "fabric-loader")
-// 	exclude(group: "net.fabricmc.fabric-api")
-// }
+project.configurations.all {
+	exclude(group: "net.fabricmc", module: "fabric-loader")
+	exclude(group: "net.fabricmc.fabric-api")
+}
 
 loom {
 	mods {
-		"example_mod" {
+		"modtracker" {
 			sourceSet("main")
 		}
 	}

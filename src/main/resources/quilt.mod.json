@@ -6,16 +6,15 @@
 		"version": "${version}",
 		"metadata": {
 			"name": "Mod Tracker",
-			"description": "Keeps track of what mods you have installed so that you know when you accidentally remove something.",
+			"description": "Lets you know when you accidentally remove a mod.",
 			"contributors": {
 				"Tr100000": "Owner"
 			},
 			"contact": {
-				"issues": "https://github.com/Tr100000/tr100000-quilt-template/issues",
-				"sources": "https://github.com/Tr100000/tr100000-quilt-template"
+				"issues": "https://github.com/Tr100000/mod-tracker/issues",
+				"sources": "https://github.com/Tr100000/mod-tracker"
 			},
-			"license": "MIT",
-			"icon": "assets/modtracker/icon.png"
+			"license": "MIT"
 		},
 		"intermediate_mappings": "net.fabricmc:intermediary",
 		"entrypoints": {
@@ -35,6 +34,5 @@
 				"versions": ">=1.20.1"
 			}
 		]
-	},
-	"mixin": "modtracker.mixins.json"
+	}
 }
