@@ -1,25 +1,25 @@
 {
 	"schema_version": 1,
 	"quilt_loader": {
-		"group": "com.example",
-		"id": "example_mod",
+		"group": "io.github.tr100000",
+		"id": "modtracker",
 		"version": "${version}",
 		"metadata": {
-			"name": "Mod Name",
-			"description": "A short description of your mod.",
+			"name": "Mod Tracker",
+			"description": "Keeps track of what mods you have installed so that you know when you accidentally remove something.",
 			"contributors": {
-				"Your name here": "Owner"
+				"Tr100000": "Owner"
 			},
 			"contact": {
-				"homepage": "https://example.com/",
 				"issues": "https://github.com/Tr100000/tr100000-quilt-template/issues",
 				"sources": "https://github.com/Tr100000/tr100000-quilt-template"
 			},
-			"icon": "assets/example_mod/icon.png"
+			"license": "MIT",
+			"icon": "assets/modtracker/icon.png"
 		},
 		"intermediate_mappings": "net.fabricmc:intermediary",
 		"entrypoints": {
-			"init": "com.example.example_mod.ExampleMod"
+			"init": "io.github.tr100000.modtracker.ModTracker"
 		},
 		"depends": [
 			{
@@ -36,5 +36,5 @@
 			}
 		]
 	},
-	"mixin": "example_mod.mixins.json"
+	"mixin": "modtracker.mixins.json"
 }

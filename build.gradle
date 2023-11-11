@@ -34,7 +34,6 @@ dependencies {
 
 	modImplementation "org.quiltmc:qsl:${qsl_version}+${minecraft_version}"
 	modImplementation "org.quiltmc.quilted-fabric-api:quilted-fabric-api:${qfapi_version}-${minecraft_version}"
-	// modImplementation "org.quiltmc.quilted-fabric-api:quilted-fabric-api-deprecated:${qfapi_version}-${minecraft_version}"
 
 	modImplementation "com.terraformersmc:modmenu:${modmenu_version}"
 }
