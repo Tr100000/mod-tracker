@@ -1,0 +1,95 @@
+plugins {
+	id 'maven-publish'
+	id 'org.quiltmc.loom' version '1.4.+'
+}
+
+base {
+	archivesName = project.archives_base_name
+}
+
+version = "$project.version+${minecraft_version}"
+group = project.maven_group
+
+repositories {
+	maven {
+		name = "TerraformersMC Maven"
+		url = "https://maven.terraformersmc.com/releases"
+		content {
+			includeGroup "com.terraformersmc"
+		}
+	}
+	maven {
+		name = "Modrinth"
+		url = "https://api.modrinth.com/maven"
+		content {
+			includeGroup "maven.modrinth"
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${minecraft_version}"
+	mappings "org.quiltmc:quilt-mappings:${minecraft_version}+build.${mappings_version}:intermediary-v2"
+	modImplementation "org.quiltmc:quilt-loader:${loader_version}"
+
+	modImplementation "org.quiltmc:qsl:${qsl_version}+${minecraft_version}"
+	modImplementation "org.quiltmc.quilted-fabric-api:quilted-fabric-api:${qfapi_version}-${minecraft_version}"
+	// modImplementation "org.quiltmc.quilted-fabric-api:quilted-fabric-api-deprecated:${qfapi_version}-${minecraft_version}"
+
+	modImplementation "com.terraformersmc:modmenu:${modmenu_version}"
+}
+
+// A bug in Quilt Loom causes transitive fabric dependencies to not be removed
+// If you have issues with dependencies, try uncommenting the lines below
+// https://github.com/QuiltMC/quilt-loom/issues/40
+// project.configurations.all {
+// 	exclude(group: "net.fabricmc", module: "fabric-loader")
+// 	exclude(group: "net.fabricmc.fabric-api")
+// }
+
+loom {
+	mods {
+		"example_mod" {
+			sourceSet("main")
+		}
+	}
+}
+
+processResources {
+	inputs.property 'version', version
+
+	filesMatching('quilt.mod.json') {
+		expand 'version': version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.encoding = 'UTF-8'
+	it.options.release = 17
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
+
+	withSourcesJar()
+	// withJavadocJar()
+}
+
+jar {
+	from('LICENSE') {
+		rename { "${it}_${base.archivesName.get()}" }
+	}
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+		}
+	}
+
+	repositories {
+		// Add repositories to publish to here.
+	}
+}
