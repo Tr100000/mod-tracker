@@ -36,6 +36,7 @@ public class ModTracker implements ModInitializer {
 	public static final Logger LOGGER = LoggerFactory.getLogger("Mod Tracker");
 
 	public static final Path DATA_PATH = QuiltLoader.getCacheDir().resolve("modtracker.json");
+    public static final Path CONFIG_PATH = QuiltLoader.getConfigDir().resolve("modtracker.json");
 	public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
 	public static Map<String, String> previous;
@@ -54,6 +55,8 @@ public class ModTracker implements ModInitializer {
         ModFilters.WHITELIST.add("quilt_base");
         ModFilters.WHITELIST.add("quilted_fabric_api");
 
+        loadConfig();
+
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             loadCurrentData();
 			loadPreviousData();
@@ -62,6 +65,24 @@ public class ModTracker implements ModInitializer {
 			saveCurrentData();
 		});
 	}
+
+    private static void loadConfig() {
+        try {
+            if (Files.exists(CONFIG_PATH)) {
+                JsonObject json = GSON.fromJson(Files.readString(CONFIG_PATH), JsonObject.class);
+                
+                if (json.has("blacklist")) {
+                    json.get("blacklist").getAsJsonArray().forEach(element -> ModFilters.BLACKLIST.add(element.getAsString()));
+                }
+                if (json.has("whitelist")) {
+                    json.get("whitelist").getAsJsonArray().forEach(element -> ModFilters.WHITELIST.add(element.getAsString()));
+                }
+            }
+        }
+        catch (IOException e) {
+            LOGGER.warn("Failed to load config!", e);
+        }
+    }
 
 	private static void loadCurrentData() {
         try {
@@ -95,7 +116,7 @@ public class ModTracker implements ModInitializer {
             }
         }
         catch (IOException e) {
-            LOGGER.warn("Failed to load data.");
+            LOGGER.warn("Failed to load data!", e);
         }
     }
 
@@ -125,7 +146,7 @@ public class ModTracker implements ModInitializer {
             Files.writeString(DATA_PATH, GSON.toJson(json));
         }
         catch (IOException e) {
-            LOGGER.warn("Failed to save data.");
+            LOGGER.warn("Failed to save data!", e);
         }
     }
 
