@@ -50,7 +50,7 @@ public class ModTracker implements ClientModInitializer {
 
         ModFilters.BLACKLIST.add("java");
         ModFilters.BLACKLIST.add("minecraft");
-        ModFilters.BLACKLIST.add("quilt(\\D)+");
+        ModFilters.BLACKLIST.add("quilt.+");
         ModFilters.WHITELIST.add("quilt_loader");
         ModFilters.WHITELIST.add("quilt_base");
         ModFilters.WHITELIST.add("quilted_fabric_api");
