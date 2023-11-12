@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 import org.quiltmc.loader.api.ModContainer;
 import org.quiltmc.loader.api.QuiltLoader;
-import org.quiltmc.qsl.base.api.entrypoint.ModInitializer;
+import org.quiltmc.qsl.base.api.entrypoint.client.ClientModInitializer;
 import org.quiltmc.qsl.command.api.client.ClientCommandRegistrationCallback;
 import org.quiltmc.qsl.networking.api.client.ClientPlayConnectionEvents;
 import org.slf4j.Logger;
@@ -31,7 +31,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.JsonHelper;
 
-public class ModTracker implements ModInitializer {
+public class ModTracker implements ClientModInitializer {
 	public static final String MODID = "modtracker";
 	public static final Logger LOGGER = LoggerFactory.getLogger("Mod Tracker");
 
@@ -45,7 +45,7 @@ public class ModTracker implements ModInitializer {
     public static List<ChangedMod> changed;
 
 	@Override
-	public void onInitialize(ModContainer mod) {
+	public void onInitializeClient(ModContainer mod) {
         ClientCommandRegistrationCallback.EVENT.register(ModTrackerCommand::register);
 
         ModFilters.BLACKLIST.add("java");

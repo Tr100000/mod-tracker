@@ -18,12 +18,24 @@
 		},
 		"intermediate_mappings": "net.fabricmc:intermediary",
 		"entrypoints": {
-			"init": "io.github.tr100000.modtracker.ModTracker"
+			"client_init": "io.github.tr100000.modtracker.ModTracker"
 		},
 		"depends": [
 			{
 				"id": "quilt_loader",
 				"versions": ">=0.20.0"
+			},
+			{
+				"id": "quilt_base",
+				"versions": ">=6.1.2"
+			},
+			{
+				"id": "quilt_client_command",
+				"versions": ">=6.1.2"
+			},
+			{
+				"id": "quilt_networking",
+				"versions": ">=6.1.2"
 			},
 			{
 				"id": "minecraft",
