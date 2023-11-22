@@ -1,5 +1,6 @@
 package io.github.tr100000.modtracker;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,6 +30,7 @@ import com.google.gson.JsonObject;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 
 public class ModTracker implements ClientModInitializer {
@@ -39,10 +41,17 @@ public class ModTracker implements ClientModInitializer {
     public static final Path CONFIG_PATH = QuiltLoader.getConfigDir().resolve("modtracker.json");
 	public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
+    public static final Identifier PACKET_SERVER_MODS = new Identifier(MODID, "info");
+
 	public static Map<String, String> previous;
     public static Map<String, String> previousNames;
     public static Map<String, String> current;
     public static List<ChangedMod> changed;
+
+    public static boolean trackModsFolder = false;
+    public static List<String> previousModFiles;
+    public static List<String> modFiles;
+    public static List<ChangedModFile> changedFiles;
 
 	@Override
 	public void onInitializeClient(ModContainer mod) {
@@ -56,9 +65,9 @@ public class ModTracker implements ClientModInitializer {
         ModFilters.WHITELIST.add("quilted_fabric_api");
 
         loadConfig();
+        loadCurrentData();
 
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            loadCurrentData();
 			loadPreviousData();
 			compareData();
 			sendMessageToPlayer(client.player);
@@ -70,16 +79,21 @@ public class ModTracker implements ClientModInitializer {
         try {
             if (Files.exists(CONFIG_PATH)) {
                 JsonObject json = GSON.fromJson(Files.readString(CONFIG_PATH), JsonObject.class);
-                
-                if (json.has("blacklist")) {
-                    json.get("blacklist").getAsJsonArray().forEach(element -> ModFilters.BLACKLIST.add(element.getAsString()));
+
+                if (JsonHelper.hasArray(json, "blacklist")) {
+                    JsonHelper.getArray(json, "blacklist").forEach(element -> ModFilters.BLACKLIST.add(element.getAsString()));
                 }
-                if (json.has("whitelist")) {
-                    json.get("whitelist").getAsJsonArray().forEach(element -> ModFilters.WHITELIST.add(element.getAsString()));
+                if (JsonHelper.hasArray(json, "whitelist")) {
+                    JsonHelper.getArray(json, "blacklist").forEach(element -> ModFilters.WHITELIST.add(element.getAsString()));
                 }
+
+                trackModsFolder = JsonHelper.getBoolean(json, "trackModsFolder", false);
+            }
+            else {
+                Files.writeString(CONFIG_PATH, "{}");
             }
         }
-        catch (IOException e) {
+        catch (Exception e) {
             LOGGER.warn("Failed to load config!", e);
         }
     }
@@ -93,6 +107,22 @@ public class ModTracker implements ClientModInitializer {
                     current.put(mod.metadata().id(), mod.metadata().version().raw());
                 }
             });
+
+            if (trackModsFolder) {
+                modFiles = new ArrayList<>();
+                File[] fileList = QuiltLoader.getGameDir().resolve("mods").toFile().listFiles();
+                for (int i = 0; i < fileList.length; i++) {
+                    if (fileList[i].isFile()) {
+                        modFiles.add(fileList[i].getName());
+                    }
+                    else if (fileList[i].isDirectory()) {
+                        LOGGER.warn("Mod files in subfolders are not supported by Mod Tracker!");
+                    }
+                    if (fileList[i].isHidden()) {
+                        LOGGER.warn("Found a hidden file ({}) in the mods folder! Do you know about this?", fileList[i].getName());
+                    }
+                }
+            }
         }
         finally {
             ModFilters.clearCompiledPatterns();
@@ -103,6 +133,7 @@ public class ModTracker implements ClientModInitializer {
         try {
             if (Files.exists(DATA_PATH)) {
                 JsonObject json = GSON.fromJson(Files.readString(DATA_PATH), JsonObject.class);
+
                 List<ModMetadata> previousData = readJsonList(json, "mods", ModMetadata::fromJson);
                 previous = new HashMap<>(previousData.size());
                 previousNames = new HashMap<>(previousData.size());
@@ -110,39 +141,65 @@ public class ModTracker implements ClientModInitializer {
                     previous.put(mod.id, mod.version);
                     previousNames.put(mod.id, mod.name);
                 });
+
+                if (trackModsFolder && JsonHelper.hasArray(json, "files")) {
+                    previousModFiles = readJsonList(json, "files", JsonElement::getAsString);
+                }
             }
             else {
                 previous = current;
+                if (trackModsFolder) {
+                    previousModFiles = modFiles;
+                }
             }
         }
-        catch (IOException e) {
+        catch (Exception e) {
             LOGGER.warn("Failed to load data!", e);
         }
     }
 
 	private static void compareData() {
-        changed = new ArrayList<>();
-        current.forEach((id, version) -> {
-            if (previous.containsKey(id)) {
-                if (!previous.get(id).equals(version)) {
-                    changed.add(new UpdatedMod(id, previous.get(id), version));
+        if (current != null && previous != null && previousNames != null) {
+            changed = new ArrayList<>();
+            current.forEach((id, version) -> {
+                if (previous.containsKey(id)) {
+                    if (!previous.get(id).equals(version)) {
+                        changed.add(new UpdatedMod(id, previous.get(id), version));
+                    }
                 }
-            }
-            else {
-                changed.add(new ChangedMod(id, ModChangedType.ADD));
-            }
-        });
-        previous.forEach((id, version) -> {
-            if (!current.containsKey(id)) {
-                changed.add(new ChangedMod(id, ModChangedType.REMOVE));
-            }
-        });
+                else {
+                    changed.add(new ChangedMod(id, ModChangedType.ADD));
+                }
+            });
+            previous.forEach((id, version) -> {
+                if (!current.containsKey(id)) {
+                    changed.add(new ChangedMod(id, ModChangedType.REMOVE));
+                }
+            });
+        }
+
+        changedFiles = new ArrayList<>();
+        if (trackModsFolder && modFiles != null && previousModFiles != null) {
+            modFiles.forEach(file -> {
+                if (!previousModFiles.contains(file)) {
+                    changedFiles.add(new ChangedModFile(file, ModChangedType.ADD));
+                }
+            });
+            previousModFiles.forEach(file -> {
+                if (!modFiles.contains(file)) {
+                    changedFiles.add(new ChangedModFile(file, ModChangedType.REMOVE));
+                }
+            });
+        }
     }
 
     private static void saveCurrentData() {
         try {
             JsonObject json = new JsonObject();
-            writeJsonList(json, "mods", current.entrySet(), ModMetadata::toJson);
+            writeJsonObjectList(json, "mods", current.entrySet(), ModMetadata::toJson);
+            if (trackModsFolder) {
+                writeJsonElementList(json, "files", modFiles, JsonArray::add);
+            }
             Files.writeString(DATA_PATH, GSON.toJson(json));
         }
         catch (IOException e) {
@@ -151,14 +208,17 @@ public class ModTracker implements ClientModInitializer {
     }
 
 	public static void sendMessageToPlayer(ClientPlayerEntity player) {
-        if (changed.isEmpty()) {
+        if ((trackModsFolder && changed.isEmpty() && changedFiles.isEmpty()) || (!trackModsFolder && changed.isEmpty())) {
             player.sendSystemMessage(Text.literal("No changed mods since last session."));
         }
         else {
             player.sendSystemMessage(Text.literal("Changed mods since last session:"));
-            changed.forEach(changed -> {
-                player.sendSystemMessage(changed.toText());
-            });
+            changed.forEach(changed -> player.sendSystemMessage(changed.toText()));
+
+            if (trackModsFolder) {
+                player.sendSystemMessage(Text.literal("Changed files since last session:"));
+                changedFiles.forEach(changed -> player.sendSystemMessage(changed.toText()));
+            }
         }
     }
 
@@ -167,15 +227,29 @@ public class ModTracker implements ClientModInitializer {
 		return jsonArrayToList(JsonHelper.getArray(json, element)).stream().map(reader).collect(Collectors.toList());
 	}
 
-	public static <T> void writeJsonList(JsonObject json, String element, Collection<T> list, BiConsumer<JsonObject, T> writer) {
-		JsonArray jsonArray = new JsonArray(list.size());
-		list.forEach(item -> {
-			JsonObject jsonObject = new JsonObject();
-			writer.accept(jsonObject, item);
-			jsonArray.add(jsonObject);
-		});
-		json.add(element, jsonArray);
+	public static <T> void writeJsonObjectList(JsonObject json, String element, Collection<T> list, BiConsumer<JsonObject, T> writer) {
+        writeJsonElementList(json, element, list, item -> {
+            JsonObject jsonObject = new JsonObject();
+            writer.accept(jsonObject, item);
+            return jsonObject;
+        });
 	}
+
+    public static <T> void writeJsonElementList(JsonObject json, String element, Collection<T> list, Function<T, JsonElement> writer) {
+        JsonArray jsonArray = new JsonArray(list.size());
+        list.forEach(item -> {
+            jsonArray.add(writer.apply(item));
+        });
+        json.add(element, jsonArray);
+    }
+
+    public static <T> void writeJsonElementList(JsonObject json, String element, Collection<T> list, BiConsumer<JsonArray, T> writer) {
+        JsonArray jsonArray = new JsonArray(list.size());
+        list.forEach(item -> {
+            writer.accept(jsonArray, item);
+        });
+        json.add(element, jsonArray);
+    }
 
 	public static List<JsonObject> jsonArrayToList(JsonArray array) {
 		List<JsonObject> list = new ArrayList<>(array.size());
@@ -249,6 +323,27 @@ public class ModTracker implements ClientModInitializer {
         @Override
         public Text toText() {
             return Text.literal("  (*) ").formatted(Formatting.GOLD).append(Text.literal(getModName() + " (" + previousVersion + " -> " + newVersion + ")"));
+        }
+    }
+
+    public static class ChangedModFile {
+        public final String file;
+        public final ModChangedType type;
+
+        public ChangedModFile(String file, ModChangedType type) {
+            this.file = file;
+            this.type = type;
+        }
+
+        public Text toText() {
+            switch (type) {
+                case ADD:
+                    return Text.literal("  (+)").formatted(Formatting.DARK_GREEN).append(file);
+                case REMOVE:
+                    return Text.literal("  (-)").formatted(Formatting.RED).append(file);
+                default:
+                    return null;
+            }
         }
     }
 
