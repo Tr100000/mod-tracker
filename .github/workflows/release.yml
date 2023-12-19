@@ -20,7 +20,7 @@ jobs:
       - name: Build Artifacts
         run: ./gradlew build
       - name: Upload Atrifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: artifacts
           path: build/libs/*.jar
